@@ -1,0 +1,54 @@
+name: Update world data
+
+on:
+  schedule:
+    - cron: '27 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worlddata-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.5'
+          extensions: intl, mbstring, dom, xml
+          coverage: none
+          tools: composer:v2
+      - run: composer install --prefer-dist --no-progress --no-interaction
+      - run: composer data:update -- --latest
+      - run: composer check
+      - run: composer audit --locked
+      - name: Verify reproducibility
+        run: |
+          sha256sum build/sources.json resources/data.json > /tmp/worlddata-checksums
+          composer data:build
+          sha256sum --check /tmp/worlddata-checksums
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: automation/worlddata
+          title: 'chore(data): update CLDR and IANA snapshots'
+          commit-message: 'chore(data): update CLDR and IANA snapshots'
+          add-paths: |
+            build/sources.json
+            resources/data.json
+          body: |
+            Refreshes the versioned CLDR and IANA data snapshots.
+
+            Validation before creating this PR: PHPUnit, Pint, PHPStan/Larastan,
+            Composer audit, and reproducible offline compilation.
+
+            Review the data changes and source versions before merging.
+            Approve the CI runs with "Approve workflows to run", or run CI
+            manually on this branch. Wait for the full Laravel/PHP matrix.

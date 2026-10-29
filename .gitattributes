@@ -12,3 +12,8 @@
 .github export-ignore
 .php_cs export-ignore
 phpunit.xml.dist export-ignore
+/build export-ignore
+/composer.lock export-ignore
+/phpstan.neon export-ignore
+/.editorconfig export-ignore
+/.gitignore export-ignore

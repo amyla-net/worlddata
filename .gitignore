@@ -2,3 +2,7 @@
 /vendor/
 /tests/reports/coverage/*
 .phpunit*
+/.cache/
+/vendor-bin/
+/workbench/bootstrap/cache/
+/workbench/storage/

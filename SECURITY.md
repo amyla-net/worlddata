@@ -1,17 +1,14 @@
-# Security Policy
+# Security policy
 
-<!--  ## Supported Versions
+Report vulnerabilities privately to Noël Sabosch at **ns@amyla.net**. Include
+the affected version, reproduction steps and the impact. Please do not publish
+an issue containing sensitive details before the report has been assessed.
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+The `main` branch preparing Amyla Worlddata 1.0 is maintained. Once released,
+the latest 1.x release supports Laravel 12 and 13 on PHP 8.3, 8.4 and 8.5.
+The legacy `crcl/worlddata` 0.x releases are no longer maintained.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
--->
-## Reporting a Vulnerability
-
-If you discover a security vulnerability within this package, please send an e-mail to Noël Sabosch via ns@amyla.net. All security vulnerabilities will be promptly addressed.
+The package performs no external requests during normal application use. Only
+maintainer data-update tooling fetches upstream data. Accuracy reports about
+countries, names or assignments may be filed as ordinary issues with a link to
+the relevant upstream source.
