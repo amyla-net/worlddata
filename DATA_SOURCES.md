@@ -29,6 +29,13 @@ South America `005`, Oceania `009`, with Antarctica `AQ` explicitly assigned to
 `AN` instead of CLDR's Outlying Oceania grouping. The selected geographical groups
 are expanded recursively. Political and deprecated grouping branches are ignored.
 
+Runtime country lists follow the installed Symfony data. When that list changes
+before this snapshot is updated, new countries remain visible with a nullable
+continent and any relationships already available from the installed sources.
+Snapshot-only relationships to countries no longer listed by Symfony are omitted.
+The compiler still requires complete country mappings when building a new snapshot,
+so tolerant runtime lookups do not hide incomplete data imports.
+
 Official language statuses are `official`, `de_facto_official`, and
 `official_regional`. Script variants share a base-language item; duplicates are
 removed. Missing language descriptions cause the import to fail instead of

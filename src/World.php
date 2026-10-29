@@ -84,7 +84,7 @@ final class World
         }
         $items = [];
         foreach (Countries::getNames($this->display->locale) as $code => $name) {
-            $items[$code] = new Country($this, $code, $name, $this->snapshot->data['countryContinents'][$code]);
+            $items[$code] = new Country($this, $code, $name, $this->snapshot->data['countryContinents'][$code] ?? null);
         }
 
         $this->countryItems = new WorldCollection($items);

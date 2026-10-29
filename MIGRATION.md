@@ -30,6 +30,9 @@ Obsolete country codes are removed. Currency lists include historical currencies
 but their country relationships describe current legal tender only. Language
 relationships describe official, de facto official and regional official status.
 Country TLD relationships contain current assigned ccTLDs, not arbitrary domains.
+When Symfony adds a country before its snapshot relationships are available,
+`continentCode` and `continent()` return null. Use `$country->continent()?->name`
+when displaying the continent. Missing collection relationships remain empty.
 
 Coordinates, capitals, native-name fields, telephone calling codes and the old
 country-center/timezone-longitude arrays are not part of 1.0. There is no direct

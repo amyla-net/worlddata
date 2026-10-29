@@ -86,7 +86,7 @@ The `Amyla\Worlddata\World` service can also be injected through Laravel's conta
 ## Items and data semantics
 
 Items have immutable public `code` and `name` properties. `Country` additionally
-exposes `continentCode`. All items implement `Arrayable` and `JsonSerializable`;
+exposes a nullable `continentCode`. All items implement `Arrayable` and `JsonSerializable`;
 serialization includes scalar data, never automatically expanded relationships.
 Collections are mutable copies, so filtering or removing entries does not alter
 other lookups.
@@ -112,8 +112,17 @@ Continent assignments follow CLDR geographical groupings. North America includes
 Central America and the Caribbean. Antarctica is explicitly `AN`. These are
 documented display groupings, not assertions about sovereignty or political unions.
 
-Missing relationships return empty collections. Names and assignments reflect the
-installed dependency and snapshot versions, rather than live services.
+Missing relationships return empty collections; `continent()` returns `null` when
+no continent is known. Names and assignments reflect the installed dependency and
+snapshot versions, rather than live services.
+
+The installed Symfony version determines which countries are listed. A newly
+added country remains available even when the bundled snapshot does not yet
+contain its continent or official languages: `continentCode` and `continent()`
+return `null`, and missing language or TLD relationships are empty collections.
+Currency and timezone relationships remain available when Symfony provides them.
+Countries removed by Symfony are omitted, including from reverse relationships.
+The next snapshot update fills in new assignments; runtime lookups never fetch data.
 
 ## TLDs
 

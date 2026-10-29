@@ -5,6 +5,7 @@
 * Add automatic package discovery and the locale-aware `world()` helper.
 * Replace legacy snapshots with Symfony Intl, Unicode CLDR and IANA sources.
 * Add typed immutable items, Laravel collections, explicit lookups and all country relationships.
+* Tolerate country additions and removals in Symfony data; unknown continent assignments are nullable.
 * Include historical currencies while limiting currency-country relationships to current legal tender.
 * Add versioned, reproducible data imports, CI and weekly maintenance workflows.
 * Remove the old static API, mutable array access, coordinates, capitals and calling codes.

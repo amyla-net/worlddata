@@ -7,14 +7,14 @@ use Amyla\Worlddata\WorldCollection;
 
 final class Country extends Item
 {
-    public function __construct(World $world, string $code, string $name, public readonly string $continentCode)
+    public function __construct(World $world, string $code, string $name, public readonly ?string $continentCode)
     {
         parent::__construct($world, $code, $name);
     }
 
-    public function continent(): Continent
+    public function continent(): ?Continent
     {
-        return $this->world->continents()->findOrFail($this->continentCode);
+        return $this->continentCode === null ? null : $this->world->continents()->find($this->continentCode);
     }
 
     /** @return WorldCollection<string, Currency> */

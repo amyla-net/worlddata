@@ -6,7 +6,7 @@ use Amyla\Worlddata\World;
 use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 
-/** @implements Arrayable<string, string> */
+/** @implements Arrayable<string, string|null> */
 abstract class Item implements Arrayable, JsonSerializable
 {
     public function __construct(
@@ -20,13 +20,13 @@ abstract class Item implements Arrayable, JsonSerializable
         return strcasecmp($this->code, $code) === 0;
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, string|null> */
     public function toArray(): array
     {
         return ['code' => $this->code, 'name' => $this->name];
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, string|null> */
     public function jsonSerialize(): array
     {
         return $this->toArray();
