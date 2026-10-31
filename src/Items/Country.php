@@ -4,12 +4,35 @@ namespace Amyla\Worlddata\Items;
 
 use Amyla\Worlddata\World;
 use Amyla\Worlddata\WorldCollection;
+use Symfony\Component\Intl\Countries;
+use Symfony\Component\Intl\Exception\MissingResourceException;
 
 final class Country extends Item
 {
+    public readonly ?string $alpha3;
+
+    public readonly ?string $numericCode;
+
     public function __construct(World $world, string $code, string $name, public readonly ?string $continentCode)
     {
         parent::__construct($world, $code, $name);
+        try {
+            $this->alpha3 = Countries::getAlpha3Code($code);
+        } catch (MissingResourceException) {
+            $this->alpha3 = null;
+        }
+        try {
+            $this->numericCode = Countries::getNumericCode($code);
+        } catch (MissingResourceException) {
+            $this->numericCode = null;
+        }
+    }
+
+    public function matches(string $code): bool
+    {
+        return parent::matches($code)
+            || ($this->alpha3 !== null && strcasecmp($this->alpha3, $code) === 0)
+            || ($this->numericCode !== null && $this->numericCode === $code);
     }
 
     public function continent(): ?Continent
@@ -43,6 +66,10 @@ final class Country extends Item
 
     public function toArray(): array
     {
-        return parent::toArray() + ['continentCode' => $this->continentCode];
+        return parent::toArray() + [
+            'continentCode' => $this->continentCode,
+            'alpha3' => $this->alpha3,
+            'numericCode' => $this->numericCode,
+        ];
     }
 }

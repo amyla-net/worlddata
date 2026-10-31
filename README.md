@@ -61,6 +61,27 @@ world()->countries()->filter(fn ($country) => $country->currencies()->has('EUR')
 and language lookup is case-insensitive and trims surrounding whitespace.
 Timezone identifiers retain their IANA spelling and case.
 
+## Country codes
+
+Countries expose nullable `alpha3` and `numericCode` properties alongside their
+canonical Alpha-2 `code`. All three forms work with `find()` and `findOrFail()`:
+
+```php
+$country = world()->countries()->findOrFail('deu');
+$country->code;        // DE
+$country->alpha3;      // DEU
+$country->numericCode; // "276"
+
+world()->countries()->find('276'); // same DE item within the same world context
+world()->countries()->find('004')->code; // AF
+world()->countries()->find('4'); // null: numeric codes require all three digits
+```
+
+Collection keys stay canonical: `has('DE')` checks the key, while `find('DEU')`
+resolves an alias. Filtered collections only resolve items they still contain.
+Unknown supplementary codes are `null`. Symfony's optional user-assigned-country
+setting applies to aliases as well.
+
 ## Names and language
 
 `world()` uses Laravel's current application locale. Pass an explicit locale to
@@ -83,11 +104,127 @@ official-language names absent from Symfony uses the IANA English description.
 
 The `Amyla\Worlddata\World` service can also be injected through Laravel's container.
 
+Languages additionally expose an immutable nullable `nativeName`:
+
+```php
+world('en')->languages()->findOrFail('de')->nativeName; // Deutsch
+world('en')->languages()->findOrFail('ja')->nativeName; // 日本語
+world('en')->languages()->findOrFail('caa')->nativeName; // null
+```
+
+An own-language label is provided when Symfony supports the language's own display
+locale. Languages without that coverage retain their regular localized or IANA
+`name` and have a `null` native name. Language items represent base languages;
+native names use the script chosen by the installed Symfony data.
+
+## Search and sorting
+
+All six item collections support multilingual name searches and locale-aware sorting:
+
+```php
+world('de')->countries()->searchByName('Germany')->sortByName();
+world('de')->countries()->searchByName('Osterreich'); // includes AT
+world('de')->countries()->searchByName('Allemagne', ['fr']); // includes DE
+world('de')->countries()->sortByName('sv-SE');
+```
+
+`searchByName(string $query, array $locales = [])` searches names and codes using
+the captured display name plus English. The locale list adds further translations.
+Country aliases and TLD ASCII/Unicode forms are included. Matching uses substrings,
+Unicode case folding and accent removal; scripts are not transliterated.
+An empty or whitespace-only query returns a copy of the current collection.
+Invalid UTF-8 queries throw `InvalidArgumentException`.
+
+`sortByName(?string $locale = null)` uses Intl's `Collator`, defaulting to the
+first item's captured display locale. An explicit locale uses the same parent and
+English fallback resolution, with the captured locale as fallback. Equal names
+retain their input order. Sort order follows the installed runtime ICU version.
+
+Both methods preserve keys, leave the source collection unchanged, and work after
+`filter()` or `only()`. They require item collections and throw
+`InvalidArgumentException` after transformations to scalar values such as
+`pluck('name')`. Laravel's existing `search()` keeps its usual key-or-false result.
+
+## Currency details
+
+```php
+$currency = world('de')->currencies()->findOrFail('CHF');
+$currency->symbol;                // CHF
+$currency->fractionDigits;        // 2
+$currency->roundingIncrement;     // 0
+$currency->cashFractionDigits;    // 2
+$currency->cashRoundingIncrement; // 5
+```
+
+These properties are immutable. The symbol follows the captured display locale;
+it may be shared by several currencies or be the currency code. The digit counts
+and rounding increments follow Symfony's currency metadata, including defaults
+for historical currencies. Increments are integers in units of the corresponding
+least-significant fractional digit: CHF's cash increment `5` with two cash
+fraction digits represents `0.05`. An increment of `0` specifies no extra rounding
+step beyond the digit precision. These are metadata fields; the package does not
+round or convert monetary amounts.
+
+## Validation
+
+Use the package's Laravel validation rule objects in Form Requests or validators:
+
+```php
+use Amyla\Worlddata\Rules\CountryCode;
+use Amyla\Worlddata\Rules\CurrencyCode;
+use Amyla\Worlddata\Rules\LanguageCode;
+use Amyla\Worlddata\Rules\TimezoneCode;
+
+$request->validate([
+    'country' => ['required', new CountryCode(only: ['DE', 'AT', 'CH'])],
+    'currency' => ['required', new CurrencyCode(only: ['EUR', 'CHF'], currentOnly: true)],
+    'language' => ['nullable', new LanguageCode(only: ['de', 'fr', 'it'])],
+    'timezone' => ['required', new TimezoneCode],
+]);
+```
+
+All rules accept an optional `only` list of code strings. An empty list imposes no
+restriction. Rules validate string values with the same normalization as lookups;
+countries accept Alpha-2, Alpha-3 and three-digit numeric strings by default.
+Allow lists compare canonical items, so allowing `DE` also allows `DEU` and `"276"`.
+Timezone spelling and case remain strict. Language codes refer to language items,
+not full locales such as `de-DE`.
+
+Validation preserves the submitted value. Use `findOrFail($value)->code` when
+storing a canonical code. Combine these non-implicit rules with Laravel's
+`required`, `sometimes` or `nullable` as appropriate. Failures use Laravel's
+translated `validation.in` message, which applications can override normally.
+
+By default, currency validation includes historical currencies. `currentOnly: true`
+requires at least one country using the currency as current legal tender. A reused
+rule resolves a fresh world context for each validation, including the current UTC
+date and Laravel locale.
+
+## Timezone details
+
+```php
+$zone = world()->timezones()->findOrFail('Europe/Berlin');
+$at = new DateTimeImmutable('2026-07-15T12:00:00Z');
+
+$zone->offsetAt($at);      // 7200 seconds
+$zone->offsetLabelAt($at); // UTC+02:00
+$zone->isDstAt($at);       // true
+```
+
+Each method requires an explicit `DateTimeInterface` and uses its instant, whatever
+its input timezone. Mutable DateTime inputs are left unchanged. Offsets and DST
+follow PHP's installed timezone database. Labels preserve fractional-hour offsets
+and include seconds for historical offsets when needed. Computed timezone values
+are not included in item serialization.
+
 ## Items and data semantics
 
 Items have immutable public `code` and `name` properties. `Country` additionally
 exposes a nullable `continentCode`. All items implement `Arrayable` and `JsonSerializable`;
 serialization includes scalar data, never automatically expanded relationships.
+Country serialization includes `alpha3` and `numericCode`; currency serialization
+includes the symbol and all four numeric metadata fields; language serialization
+includes `nativeName`, including when it is `null`.
 Collections are mutable copies, so filtering or removing entries does not alter
 other lookups.
 
@@ -144,6 +281,20 @@ Generic or supranational labels such as `.com`, `.berlin` and `.eu` do not acqui
 a country from the registry operator's address. Country-code labels outside the
 country dataset, such as `.ac` and `.su`, likewise have no country relationship.
 This is a TLD catalog, not a domain validator, Public Suffix List, or availability check.
+
+## Installed data information
+
+`world()->dataInfo()` returns a copy of the installed provenance and runtime metadata:
+
+- `snapshot`: existing `cldrVersion`, `ianaTldsDate`, `ianaLanguagesDate` and
+  `sources` entries containing upstream URLs and original SHA-256 hashes.
+- `runtime`: `symfonyIntlVersion`, `symfonyIcuDataVersion`, `icuVersion`,
+  `icuDataVersion` and `timezoneDatabaseVersion`.
+
+Symfony's bundled ICU data version is distinct from the runtime ICU data version
+used for collation. The PHP timezone database version is returned as reported by
+PHP, including `0.system` on installations using system timezone files. This API
+does not fetch sources or infer versions that the runtime does not report.
 
 ## Development and maintenance
 

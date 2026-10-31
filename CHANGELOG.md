@@ -7,6 +7,11 @@
 * Add typed immutable items, Laravel collections, explicit lookups and all country relationships.
 * Tolerate country additions and removals in Symfony data; unknown continent assignments are nullable.
 * Include historical currencies while limiting currency-country relationships to current legal tender.
+* Add Alpha-3 and numeric country aliases to lookups, retaining Alpha-2 keys and leading zeros.
+* Expose immutable currency symbols, digit/rounding metadata and nullable native language names in items and JSON.
+* Add country, currency, language and timezone validation rules with allow lists and optional current-tender checks.
+* Add multilingual `searchByName()` and locale-aware `sortByName()` without changing Laravel's `search()` semantics.
+* Calculate timezone offsets and DST for explicit instants and expose installed data provenance through `dataInfo()`.
 * Add versioned, reproducible data imports, CI and weekly maintenance workflows.
 * Remove the old static API, mutable array access, coordinates, capitals and calling codes.
 

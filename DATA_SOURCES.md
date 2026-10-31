@@ -5,7 +5,7 @@ dates and SHA-256 checksums are recorded in both the source and runtime snapshot
 
 | Source | Used for | Versioning / notice |
 | --- | --- | --- |
-| [Symfony Intl](https://symfony.com/doc/current/components/intl.html) | Countries, localized names, currencies, current currency relationships and timezones | Composer resolves the supported 7.4 line; Symfony and its data notices accompany that dependency |
+| [Symfony Intl](https://symfony.com/doc/current/components/intl.html) | Countries and code aliases, localized and native language names, currency metadata, current currency relationships and timezone catalogs | Composer resolves the supported 7.4 line; Symfony and its data notices accompany that dependency |
 | [Unicode CLDR](https://github.com/unicode-org/cldr-json) | Geographical containment, continent names and official-language status | Pinned CLDR release, initially 49.0.0; Unicode License v3, included in `LICENSES/Unicode-3.0.txt` |
 | [IANA TLD registry](https://data.iana.org/TLD/v1/tlds.json) | Active TLD labels, Unicode forms, types and IDN country assignments | Export `specversion` 1, generated date and original SHA-256; [IANA terms](https://www.iana.org/help/terms-of-service) |
 | [IANA Language Subtag Registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry) | English labels for official languages not named in Symfony | File-Date and original SHA-256; [IANA/IETF protocol-registry licensing statement](https://www.iana.org/help/licensing-terms), CC0 |
@@ -49,8 +49,23 @@ supranational TLDs never infer a country from operator details or political unio
 
 Currency-country relationships are derived at lookup time from Symfony's public
 API, using legal-tender and active filters and the context's UTC date. Timezone
-relationships use Symfony's country-to-zone mapping and its inverse; no separate
-historical timezone snapshot or UTC-offset calculator is maintained here.
+relationships use Symfony's country-to-zone mapping and its inverse. Offsets and
+DST at explicit instants are computed by PHP's installed `DateTimeZone` database;
+no separate historical timezone snapshot is maintained here.
+
+Alpha-3 and three-digit numeric country aliases use Symfony's public conversion
+APIs, with nullable metadata when absent. Currency symbols, fraction digits and
+rounding increments also use Symfony's public APIs. Native language names require
+a supported own-language display locale; missing coverage remains `null` rather
+than relabeling an English fallback as a native name. These features add no
+downloads or changes to the source and runtime snapshot formats.
+
+Multilingual search reads additional installed translations only when requested;
+English is always included alongside the captured display name. Case folding and
+accent removal use the installed Intl/Unicode facilities, and name sorting uses
+the runtime ICU collation data. `world()->dataInfo()` exposes snapshot provenance
+and separately reports the Symfony data, runtime ICU and PHP timezone database
+versions used by these operations.
 
 ## Updating and reviewing
 
