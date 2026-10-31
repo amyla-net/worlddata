@@ -5,21 +5,37 @@ namespace Amyla\Worlddata;
 use Amyla\Worlddata\Items\Continent;
 use Amyla\Worlddata\Items\Country;
 use Amyla\Worlddata\Items\Currency;
+use Amyla\Worlddata\Items\Item;
 use Amyla\Worlddata\Items\Language;
 use Amyla\Worlddata\Items\Timezone;
 use Amyla\Worlddata\Items\Tld;
 use Amyla\Worlddata\Support\DisplayLocale;
 use Amyla\Worlddata\Support\Snapshot;
+use Composer\InstalledVersions;
 use DateTimeImmutable;
 use Symfony\Component\Intl\Countries;
 use Symfony\Component\Intl\Currencies;
 use Symfony\Component\Intl\Exception\MissingResourceException;
+use Symfony\Component\Intl\Intl;
 use Symfony\Component\Intl\Languages;
+use Symfony\Component\Intl\Locales;
 use Symfony\Component\Intl\Timezones;
 
 final class World
 {
     private readonly DisplayLocale $display;
+
+    /** @var array<string, array<string, string>> */
+    private array $searchNames = [];
+
+    /** @var array<string, DisplayLocale> */
+    private array $searchDisplays = [];
+
+    /** @var array<string, string|null> */
+    private array $nativeLanguageNames = [];
+
+    /** @var array<string, int>|null */
+    private ?array $nativeLocales = null;
 
     /** @var array<string, list<string>> */
     private array $currenciesByCountry = [];
@@ -58,6 +74,86 @@ final class World
         private readonly DateTimeImmutable $date,
     ) {
         $this->display = new DisplayLocale($locale, $fallbackLocale);
+    }
+
+    /** @internal */
+    public function displayLocale(): string
+    {
+        return $this->display->locale;
+    }
+
+    /** @return array{snapshot: array<string, mixed>, runtime: array<string, string|null>} */
+    public function dataInfo(): array
+    {
+        return [
+            'snapshot' => $this->snapshot->data['meta'],
+            'runtime' => [
+                'symfonyIntlVersion' => InstalledVersions::getPrettyVersion('symfony/intl'),
+                'symfonyIcuDataVersion' => Intl::getIcuDataVersion(),
+                'icuVersion' => INTL_ICU_VERSION,
+                'icuDataVersion' => INTL_ICU_DATA_VERSION,
+                'timezoneDatabaseVersion' => timezone_version_get(),
+            ],
+        ];
+    }
+
+    /** @internal */
+    public function nativeLanguageName(string $code): ?string
+    {
+        if (! array_key_exists($code, $this->nativeLanguageNames)) {
+            $this->nativeLocales ??= array_flip(Locales::getLocales());
+            $name = null;
+            if (isset($this->nativeLocales[$code])) {
+                try {
+                    $name = Languages::getName($code, $code);
+                } catch (MissingResourceException) {
+                    // An English fallback is not an attested native name.
+                }
+            }
+            $this->nativeLanguageNames[$code] = $name;
+        }
+
+        return $this->nativeLanguageNames[$code];
+    }
+
+    /**
+     * @internal
+     *
+     * @param  list<string>  $locales
+     * @return list<string>
+     */
+    public function searchTerms(Item $item, array $locales = []): array
+    {
+        $terms = [$item->code, $item->name];
+        if ($item instanceof Country) {
+            foreach ([$item->alpha3, $item->numericCode] as $code) {
+                if ($code !== null) {
+                    $terms[] = $code;
+                }
+            }
+        }
+        if ($item instanceof Tld) {
+            return [...$terms, $item->ascii];
+        }
+        foreach (array_unique(['en', ...$locales]) as $locale) {
+            $display = $this->searchDisplays[$locale] ??= new DisplayLocale($locale, $this->display->locale);
+            $key = $item::class.':'.implode('|', $display->candidates);
+            if (! isset($this->searchNames[$key])) {
+                $this->searchNames[$key] = match (true) {
+                    $item instanceof Country => Countries::getNames($display->locale),
+                    $item instanceof Currency => Currencies::getNames($display->locale),
+                    $item instanceof Language => Languages::getNames($display->locale) + $this->snapshot->data['extraLanguages'],
+                    $item instanceof Timezone => Timezones::getNames($display->locale),
+                    $item instanceof Continent => array_map($display->name(...), $this->snapshot->data['continents']),
+                    default => [],
+                };
+            }
+            if (isset($this->searchNames[$key][$item->code])) {
+                $terms[] = $this->searchNames[$key][$item->code];
+            }
+        }
+
+        return $terms;
     }
 
     /** @return WorldCollection<string, Continent> */

@@ -26,7 +26,9 @@ final class CountryDataCompatibilityTest extends TestCase
         $this->assertSame('Deutschland', $country->name);
         $this->assertNull($country->continentCode);
         $this->assertNull($country->continent());
-        $this->assertSame(['code' => 'DE', 'name' => 'Deutschland', 'continentCode' => null], $country->toArray());
+        $this->assertSame(['code' => 'DE', 'name' => 'Deutschland', 'continentCode' => null, 'alpha3' => 'DEU', 'numericCode' => '276'], $country->toArray());
+        $this->assertSame($country, $world->countries()->find('DEU'));
+        $this->assertSame($country, $world->countries()->find('276'));
         $this->assertSame($country->toArray(), json_decode(json_encode($country, JSON_THROW_ON_ERROR), true));
         $this->assertTrue($country->languages()->isEmpty());
         $this->assertTrue($country->tlds()->isEmpty());

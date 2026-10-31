@@ -102,7 +102,7 @@ final class WorldTest extends TestCase
     public function test_json_serializes_only_scalar_fields_and_objects_are_immutable(): void
     {
         $country = world('de')->countries()->findOrFail('DE');
-        $expected = ['code' => 'DE', 'name' => 'Deutschland', 'continentCode' => 'EU'];
+        $expected = ['code' => 'DE', 'name' => 'Deutschland', 'continentCode' => 'EU', 'alpha3' => 'DEU', 'numericCode' => '276'];
         $this->assertSame($expected, $country->toArray());
         $this->assertSame($expected, json_decode(json_encode($country, JSON_THROW_ON_ERROR), true));
         $this->assertSame(['DE' => $expected], world('de')->countries()->only('DE')->toArray());
